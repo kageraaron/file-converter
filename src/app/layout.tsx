@@ -27,6 +27,15 @@ export default function RootLayout({
 
           gtag('config', 'G-TT7HYVRZGJ');
         `}} />
+
+        <script async src="https://www.googletagmanager.com/gtag/js?id=AW-401588546"></script>
+        <script dangerouslySetInnerHTML={{ __html: `
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'AW-401588546');
+        `}} />
       </head>
       <body>
         <nav style={{ padding: '1.5rem 2rem', borderBottom: '1px solid var(--border)' }}>

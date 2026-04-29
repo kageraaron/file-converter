@@ -41,6 +41,9 @@ Goal: High SEO visibility, ad-supported free tier, and premium subscription/toke
 - **Auto-Ads:** Insert the AdSense/Ezoic script tag in `src/app/layout.tsx` within the `<head>` to enable "Auto Ads" across all SEO landing pages.
 - **Placeholder Management:** Use reserved CSS classes (e.g., `.ad-slot`) in UI components to prevent Layout Shift (CLS) when ads load.
 
+### 4. Obsess over SEO and Ads performance
+- integrate with Google Ads API to consistently test and optimize for best ad performance that yields traffic.
+
 ## Build & Test Commands
 *Placeholder commands - update as the stack is finalized*
 - Build: `npm run build`
