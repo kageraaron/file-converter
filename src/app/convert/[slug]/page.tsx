@@ -1,5 +1,7 @@
 import { Metadata } from 'next';
+import Link from 'next/link';
 import Converter from '@/components/Converter/Converter';
+import { getFormat, isConversionSupported, getValidTargets } from '@/lib/formats';
 
 interface PageProps {
   params: Promise<{
@@ -7,206 +9,257 @@ interface PageProps {
   }>;
 }
 
+function parseSlug(slug: string): { from: string; to: string } | null {
+  const parts = slug.split('-to-');
+  if (parts.length !== 2) return null;
+  return { from: parts[0].toUpperCase(), to: parts[1].toUpperCase() };
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const parts = slug.split('-to-');
-  if (parts.length !== 2) return { title: 'File Converter' };
-  
-  const [from, to] = parts;
-  const fromUpper = from.toUpperCase();
-  const toUpper = to.toUpperCase();
+  const parsed = parseSlug(slug);
+  if (!parsed) return { title: 'File Converter' };
 
-  const title = `Free ${fromUpper} to ${toUpper} Converter - 100% Private & Local`;
-  const description = `Convert ${fromUpper} to ${toUpper} instantly in your browser. No file uploads, no limits, and total privacy. Fast, secure, and free online file conversion.`;
+  const { from, to } = parsed;
+  const title = `Free ${from} to ${to} Converter — 100% Private & Local`;
+  const description = `Convert ${from} to ${to} instantly in your browser. No uploads, no file size limits, total privacy. Free, secure, and runs entirely on your device.`;
 
   return {
     title,
     description,
-    openGraph: {
-      title,
-      description,
-      type: 'website',
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-    },
+    openGraph: { title, description, type: 'website' },
+    twitter: { card: 'summary_large_image', title, description },
   };
 }
 
-// Generate static params for the most common conversions to boost SEO
+// Pre-render the highest-traffic conversions for SEO.
 export async function generateStaticParams() {
   const commonConversions = [
-    'heic-to-jpg',
-    'heic-to-png',
-    'pdf-to-jpg',
-    'pdf-to-png',
-    'jpg-to-pdf',
-    'png-to-pdf',
-    'mp4-to-mp3',
-    'mov-to-mp4',
+    'heic-to-jpg', 'heic-to-png',
+    'webp-to-png', 'webp-to-jpg',
+    'png-to-jpg', 'jpg-to-png',
+    'svg-to-png', 'tiff-to-png',
+    'pdf-to-jpg', 'pdf-to-png',
+    'jpg-to-pdf', 'png-to-pdf',
+    'mp4-to-mp3', 'mov-to-mp4', 'webm-to-mp4', 'mp4-to-gif', 'wav-to-mp3',
   ];
   return commonConversions.map((slug) => ({ slug }));
 }
 
 export default async function ConvertPage({ params }: PageProps) {
   const { slug } = await params;
-  const parts = slug.split('-to-');
-  
-  if (parts.length !== 2) {
+  const parsed = parseSlug(slug);
+
+  if (!parsed) {
     return (
       <main className="main container">
         <div style={{ padding: '4rem 0', textAlign: 'center' }}>
-          <h1>Invalid Conversion Type</h1>
-          <p>Please return to the home page and select a valid format.</p>
+          <h1>Conversion not found</h1>
+          <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+            The URL doesn't match a recognized format. Pick a conversion below.
+          </p>
+          <Link href="/" className="btn btn--primary btn--lg" style={{ marginTop: '2rem' }}>
+            Browse all tools
+          </Link>
         </div>
       </main>
     );
   }
 
-  const [from, to] = parts;
-  const fromUpper = from.toUpperCase();
-  const toUpper = to.toUpperCase();
+  const { from, to } = parsed;
+  const fromFormat = getFormat(from);
+  const supported = fromFormat && isConversionSupported(from, to);
 
-  // Schema.org HowTo and FAQ data
+  // Suggest related conversions for cross-linking (boosts internal SEO graph).
+  const related = fromFormat
+    ? getValidTargets(from)
+        .filter((t) => t !== to)
+        .slice(0, 6)
+        .map((t) => ({ from, to: t }))
+    : [];
+
+  // Schema.org HowTo + FAQ JSON-LD
   const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "HowTo",
-    "name": `How to convert ${fromUpper} to ${toUpper} locally`,
-    "description": `Step-by-step guide to convert your ${fromUpper} files to ${toUpper} format using your browser's local processing power.`,
-    "step": [
-      {
-        "@type": "HowToStep",
-        "text": `Select or drag and drop your ${fromUpper} file into the converter area.`,
-        "name": "Upload File"
-      },
-      {
-        "@type": "HowToStep",
-        "text": `Click the 'Convert to ${toUpper}' button. The processing happens entirely on your device.`,
-        "name": "Process Locally"
-      },
-      {
-        "@type": "HowToStep",
-        "text": `Once finished, click the 'Download' button to save your new ${toUpper} file.`,
-        "name": "Download Result"
-      }
-    ]
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: `How to convert ${from} to ${to} locally`,
+    description: `Step-by-step guide to convert ${from} files to ${to} using your browser's local processing power.`,
+    step: [
+      { '@type': 'HowToStep', name: 'Add file', text: `Drag a ${from} file into the dropzone or click to browse.` },
+      { '@type': 'HowToStep', name: 'Convert', text: `Click "Convert" — the file is processed entirely on your device.` },
+      { '@type': 'HowToStep', name: 'Download', text: `Save your new ${to} file. Nothing was uploaded.` },
+    ],
   };
 
   const faqJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
       {
-        "@type": "Question",
-        "name": `Is it safe to convert ${fromUpper} to ${toUpper} online?`,
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": `Yes, our tool is 100% safe because it works locally. Unlike other converters, your files never leave your computer or get uploaded to any server.`
-        }
+        '@type': 'Question',
+        name: `Is it safe to convert ${from} to ${to} online?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Yes. Conversion runs in your browser with WebAssembly, so your file never leaves your device or touches a server.`,
+        },
       },
       {
-        "@type": "Question",
-        "name": `What is the file size limit for ${fromUpper} to ${toUpper} conversion?`,
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": `Since the conversion happens on your own device, there are no artificial file size limits. It only depends on your browser's memory and CPU.`
-        }
-      }
-    ]
+        '@type': 'Question',
+        name: `Is there a file size limit?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `No artificial limit — only your browser's available memory and CPU.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `Do I need to install anything?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `No. Everything runs in modern browsers using WebAssembly and Web Workers — no plugins or downloads.`,
+        },
+      },
+    ],
   };
 
   return (
     <main className="main container">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
 
-      <div className="ad-container ad-banner" style={{ margin: '1rem 0' }}>
-        {/* AdSense/Ezoic Placeholder */}
-        <div style={{ height: '90px', background: '#f0f0f0', border: '1px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
-          ADVERTISEMENT - TOP BANNER (970x90 or 728x90)
-        </div>
+      {/* Breadcrumb-style header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          fontSize: '0.85rem',
+          color: 'var(--text-muted)',
+          marginBottom: '1.25rem',
+        }}
+      >
+        <Link href="/">Home</Link>
+        <span>·</span>
+        <span>{from} to {to}</span>
       </div>
 
-      <section style={{ textAlign: 'center', marginBottom: '3rem' }}>
-        <h1 style={{ fontSize: '2.8rem', marginBottom: '1rem', fontWeight: 800 }}>
-          {fromUpper} to {toUpper} <span style={{ color: 'var(--primary)' }}>Converter</span>
+      <section className="hero" style={{ marginTop: 0 }}>
+        <h1 className="hero__title">
+          {from} to {to} <span style={{ color: 'var(--primary)' }}>converter</span>
         </h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem', maxWidth: '700px', margin: '0 auto', lineHeight: '1.5' }}>
-          Fast, free, and 100% private. Your {fromUpper} files are processed locally in your browser and never touch our servers.
+        <p className="hero__subtitle">
+          Drop a {from} file below to get a {to} back in seconds. Everything is processed locally — no uploads,
+          no signups, no file size limits.
         </p>
       </section>
 
-      <div style={{ display: 'flex', gap: '2.5rem', width: '100%', alignItems: 'flex-start', flexDirection: 'row', flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 600px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <Converter from={fromUpper} to={toUpper} />
-          
-          <div className="content-block" style={{ marginTop: '4rem', width: '100%' }}>
-            <h2 style={{ fontSize: '2rem', marginBottom: '1.5rem' }}>Why use our {fromUpper} to {toUpper} converter?</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>🔒 Total Privacy</h3>
-                <p style={{ color: 'var(--text-muted)' }}>We use WebAssembly technology to process files on your device. Your data stays with you.</p>
-              </div>
-              <div>
-                <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>⚡ Blazing Fast</h3>
-                <p style={{ color: 'var(--text-muted)' }}>Skip the upload and download queues. Local processing is often faster than remote servers.</p>
-              </div>
-              <div>
-                <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>💰 100% Free</h3>
-                <p style={{ color: 'var(--text-muted)' }}>No subscriptions, no "pro" limits, and no hidden fees for large files.</p>
-              </div>
-            </div>
+      {/* Inline converter — pinned to this format pair */}
+      <div style={{ maxWidth: 880, margin: '0 auto', width: '100%' }}>
+        {supported ? (
+          <Converter from={from} to={to} />
+        ) : (
+          <div
+            className="card"
+            style={{ textAlign: 'center', padding: '2.5rem' }}
+          >
+            <h3 style={{ marginBottom: '0.5rem' }}>That conversion isn't supported yet</h3>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+              We can't convert {from} → {to} in the browser yet. Try one of the related conversions below.
+            </p>
+            <Link href="/" className="btn btn--primary">Browse all tools</Link>
           </div>
-        </div>
-        
-        <aside style={{ flex: '1 1 300px', position: 'sticky', top: '2rem' }}>
-          <div className="ad-container ad-rectangle" style={{ marginBottom: '2rem' }}>
-            <div style={{ height: '250px', background: '#f0f0f0', border: '1px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666', textAlign: 'center', padding: '1rem' }}>
-              ADVERTISEMENT<br/>SIDEBAR RECTANGLE<br/>(300x250 or 300x600)
-            </div>
-          </div>
-          
-          <div style={{ 
-            padding: '1.5rem', 
-            border: '1px solid var(--border)', 
-            borderRadius: 'var(--radius)', 
-            background: 'var(--secondary)',
-          }}>
-            <h4 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>Quick Steps</h4>
-            <ol style={{ paddingLeft: '1.2rem', fontSize: '0.95rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>
-              <li style={{ marginBottom: '0.8rem' }}><strong>Select:</strong> Choose your {fromUpper} file.</li>
-              <li style={{ marginBottom: '0.8rem' }}><strong>Convert:</strong> Hit the button to process locally.</li>
-              <li><strong>Save:</strong> Download your {toUpper} instantly.</li>
-            </ol>
-          </div>
-        </aside>
+        )}
       </div>
 
-      <div className="ad-container ad-banner" style={{ margin: '4rem 0' }}>
-        <div style={{ height: '250px', background: '#f0f0f0', border: '1px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
-          ADVERTISEMENT - MID-CONTENT BOARD (728x250)
-        </div>
+      <div className="ad-container ad-banner" style={{ marginTop: '3rem' }}>
+        Advertisement · 970×90
       </div>
 
-      <section className="faq-section" style={{ maxWidth: '800px', margin: '0 auto 4rem' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '2rem' }}>Frequently Asked Questions</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div style={{ padding: '1.5rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Is this {fromUpper} to {toUpper} converter safe for sensitive documents?</h3>
-            <p style={{ color: 'var(--text-muted)' }}>Absolutely. Because the conversion is done via WebWorkers in your own browser, the file content is never transmitted over the internet to our servers. It's as safe as offline software.</p>
+      {/* Why this tool */}
+      <section style={{ marginTop: '4rem' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
+          Why our {from} → {to} converter?
+        </h2>
+        <p style={{ textAlign: 'center', color: 'var(--text-muted)', maxWidth: 600, margin: '0 auto' }}>
+          Built for people who care where their files go.
+        </p>
+
+        <div className="feature-grid">
+          <div className="feature">
+            <h3>Total privacy</h3>
+            <p>
+              Your {from} file is decoded and re-encoded inside the browser tab. No server, no upload, no
+              telemetry — even on huge files.
+            </p>
           </div>
-          <div style={{ padding: '1.5rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Do I need to install anything?</h3>
-            <p style={{ color: 'var(--text-muted)' }}>No. Everything runs in your browser using modern web standards like WASM and Web Workers. No plugins or software downloads required.</p>
+          <div className="feature">
+            <h3>Blazing fast</h3>
+            <p>
+              No upload step means conversion starts immediately. Most files finish in less time than it would take
+              to send them anywhere.
+            </p>
           </div>
+          <div className="feature">
+            <h3>Free, no limits</h3>
+            <p>
+              No subscription, no daily quota, no "Pro" tier blocking large files. The free version is the full
+              version.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Related conversions */}
+      {related.length > 0 && (
+        <section style={{ marginTop: '4rem' }}>
+          <h2 style={{ textAlign: 'center', marginBottom: '0.5rem' }}>More from {from}</h2>
+          <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginBottom: '2rem' }}>
+            Other formats you can convert {from} to.
+          </p>
+          <div className="catalog-grid">
+            {related.map((conv) => (
+              <Link
+                key={`${conv.from}-${conv.to}`}
+                href={`/convert/${conv.from.toLowerCase()}-to-${conv.to.toLowerCase()}`}
+                className="catalog-tile"
+              >
+                <span className="catalog-tile__route">Convert</span>
+                <span className="catalog-tile__title">
+                  {conv.from} <span style={{ color: 'var(--text-subtle)', fontWeight: 500 }}>→</span>{' '}
+                  <strong>{conv.to}</strong>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* FAQ */}
+      <section style={{ maxWidth: 760, margin: '5rem auto 0' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '2rem' }}>Frequently asked</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <details className="card" style={{ padding: '1.1rem 1.25rem' }}>
+            <summary style={{ cursor: 'pointer', fontWeight: 700 }}>
+              Is this {from} → {to} converter safe for sensitive documents?
+            </summary>
+            <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+              Yes. Conversion happens entirely inside the browser tab using WebAssembly and Web Workers. There's
+              no server endpoint that could leak the file content.
+            </p>
+          </details>
+          <details className="card" style={{ padding: '1.1rem 1.25rem' }}>
+            <summary style={{ cursor: 'pointer', fontWeight: 700 }}>Do I need to install anything?</summary>
+            <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+              No. Any modern browser (Chrome, Firefox, Safari, Edge) is enough — there are no plugins or
+              downloads.
+            </p>
+          </details>
+          <details className="card" style={{ padding: '1.1rem 1.25rem' }}>
+            <summary style={{ cursor: 'pointer', fontWeight: 700 }}>What's the file size limit?</summary>
+            <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+              There isn't one we impose. The practical limit is whatever your machine can fit in memory.
+            </p>
+          </details>
         </div>
       </section>
     </main>
