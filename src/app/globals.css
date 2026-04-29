@@ -341,21 +341,17 @@ p { color: var(--text); }
 }
 
 /* =====================================================
-   Ad slots — reserve space to prevent layout shift
+   Ad slots — reserve space to prevent layout shift.
+   Only rendered by <AdSlot/> when ads are enabled AND filled;
+   no dashed box / placeholder styling so unfilled = invisible.
    ===================================================== */
 .ad-container {
-  background: var(--surface-2);
-  border: 1px dashed var(--border-strong);
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 2rem 0;
-  color: var(--text-subtle);
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .ad-banner    { width: 100%; max-width: 970px; height: 90px; margin-left: auto; margin-right: auto; }

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Converter from '@/components/Converter/Converter';
+import AdSlot from '@/components/Ads/AdSlot';
 import { CONVERSION_CATEGORIES } from '@/lib/formats';
 
 const FEATURE_ICONS: Record<string, React.ReactElement> = {
@@ -42,9 +43,7 @@ export default function Home() {
         <Converter />
       </div>
 
-      <div className="ad-container ad-banner" style={{ marginTop: '3rem' }}>
-        Advertisement · 970×90
-      </div>
+      <AdSlot format="banner" style={{ marginTop: '3rem' }} />
 
       {/* Conversion catalog */}
       <section id="tools" style={{ marginTop: '5rem' }}>
@@ -80,9 +79,7 @@ export default function Home() {
         ))}
       </section>
 
-      <div className="ad-container ad-banner" style={{ height: 250, maxWidth: 970, marginTop: '2rem' }}>
-        Advertisement · 970×250
-      </div>
+      <AdSlot format="banner" style={{ height: 250, maxWidth: 970, marginTop: '2rem' }} />
 
       {/* Why local */}
       <section

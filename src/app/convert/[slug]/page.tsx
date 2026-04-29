@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Converter from '@/components/Converter/Converter';
+import AdSlot from '@/components/Ads/AdSlot';
 import { getFormat, isConversionSupported, getValidTargets } from '@/lib/formats';
 
 interface PageProps {
@@ -171,9 +172,7 @@ export default async function ConvertPage({ params }: PageProps) {
         )}
       </div>
 
-      <div className="ad-container ad-banner" style={{ marginTop: '3rem' }}>
-        Advertisement · 970×90
-      </div>
+      <AdSlot format="banner" style={{ marginTop: '3rem' }} />
 
       {/* Why this tool */}
       <section style={{ marginTop: '4rem' }}>

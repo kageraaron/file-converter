@@ -240,6 +240,17 @@ export default function Converter({ from, to, autoStart = false, compact = false
 
   /* ----- conversion ---------------------------------------- */
 
+  // TODO(monetization): Phase 3 — interstitial video ad rolls during conversion.
+  // When a conversion starts (status flips to 'converting'), open a modal that
+  // plays a ~15s rewarded/interstitial video ad. Disable the per-item Download
+  // button until BOTH (a) the conversion has finished AND (b) the user has
+  // watched at least 15 seconds of the ad. Premium / token-tier users should
+  // bypass this gate. Likely implementation:
+  //   - <ConversionAdGate> overlay component triggered from this callback
+  //   - track `adWatchedMs` per item in QueueItem, gate `downloadAll` + the
+  //     individual download buttons in the queue row on `adWatchedMs >= 15000`
+  //   - hook into AdSense / Ezoic rewarded video, fall back to silent skip
+  //     if the ad network can't deliver an ad (no fill).
   const convertItem = useCallback(async (id: string, seed?: QueueItem) => {
     setItems((prev) =>
       prev.map((it) => (it.id === id ? { ...it, status: 'converting', progress: 0, error: undefined, results: [] } : it))
