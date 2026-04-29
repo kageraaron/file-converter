@@ -19,10 +19,11 @@ vi.mock('heic2any', () => ({
   default: vi.fn().mockResolvedValue(new Blob(['mock-heic'], { type: 'image/png' })),
 }));
 
-// Mock drawImage to avoid "Image or Canvas expected" error in JSDOM
-// We need to return a dummy canvas/image object to make JSDOM happy
+// Mock drawImage to return early and avoid JSDOM errors
 if (typeof CanvasRenderingContext2D !== 'undefined') {
-  CanvasRenderingContext2D.prototype.drawImage = vi.fn(function() {});
+  CanvasRenderingContext2D.prototype.drawImage = vi.fn().mockImplementation(function() {
+    return;
+  });
 }
 
 // Better Mock FileReader
@@ -64,4 +65,8 @@ if (typeof HTMLCanvasElement !== 'undefined') {
     const blob = new Blob(['mock-blob'], { type: type || 'image/png' });
     setTimeout(() => callback(blob), 0);
   };
+  HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue({
+    drawImage: vi.fn(),
+    fillRect: vi.fn(),
+  });
 }
