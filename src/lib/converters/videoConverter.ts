@@ -61,7 +61,7 @@ export async function convertMedia(
 
   const data = await ffmpeg.readFile(outputName);
   const mimeType = targetFormat === 'MP3' ? 'audio/mpeg' : (targetFormat === 'GIF' ? 'image/gif' : 'video/mp4');
-  const blob = new Blob([data], { type: mimeType });
+  const blob = new Blob([data as any], { type: mimeType });
 
   // Cleanup
   await ffmpeg.deleteFile(inputName);

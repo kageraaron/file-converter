@@ -8,6 +8,8 @@ interface ConverterProps {
 }
 
 export default function Converter({ from, to }: ConverterProps) {
+  const [file, setFile] = useState<File | null>(null);
+  const [isConverting, setIsConverting] = useState(false);
   const [results, setResults] = useState<{ blob: Blob; url: string; name: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number>(0);
@@ -53,8 +55,9 @@ export default function Converter({ from, to }: ConverterProps) {
         const { convertMedia } = await import('@/lib/converters/videoConverter');
         const blob = await convertMedia(file, to, (p) => setProgress(p));
         blobs = [blob];
-      } else if (isPdf && (from === 'JPG' || from === 'PNG')) {
+      } else if (isPdf && imageFormats.includes(from)) {
         const { convertImagesToPdf } = await import('@/lib/converters/pdfConverter');
+        // If it's a format like HEIC or TIFF, convert it to PNG first within pdfConverter normalization
         const blob = await convertImagesToPdf([file]);
         blobs = [blob];
       } else if (from === 'PDF' && (to === 'JPG' || to === 'PNG')) {

@@ -1,5 +1,6 @@
 import { PDFDocument } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
+import { convertImage } from './imageConverter';
 
 // Initialize PDF.js worker
 if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
@@ -33,20 +34,20 @@ export async function convertPdfToImages(file: File, format: 'JPG' | 'PNG'): Pro
   return imageBlobs;
 }
 
+async function normalizeImageToPng(file: File): Promise<ArrayBuffer> {
+  // Use the robust convertImage utility to get a standard PNG
+  // This handles HEIC, SVG, TIFF, and cleans up strict JPEG issues
+  const blob = await convertImage(file, 'PNG');
+  return await blob.arrayBuffer();
+}
+
 export async function convertImagesToPdf(files: File[]): Promise<Blob> {
   const pdfDoc = await PDFDocument.create();
 
   for (const file of files) {
-    const arrayBuffer = await file.arrayBuffer();
-    let image;
-    
-    if (file.type === 'image/jpeg' || file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.jpeg')) {
-      image = await pdfDoc.embedJpg(arrayBuffer);
-    } else if (file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')) {
-      image = await pdfDoc.embedPng(arrayBuffer);
-    } else {
-      continue;
-    }
+    // Standardize all images to PNG to ensure compatibility with pdf-lib
+    const pngBytes = await normalizeImageToPng(file);
+    const image = await pdfDoc.embedPng(pngBytes);
 
     const page = pdfDoc.addPage([image.width, image.height]);
     page.drawImage(image, {
@@ -58,5 +59,5 @@ export async function convertImagesToPdf(files: File[]): Promise<Blob> {
   }
 
   const pdfBytes = await pdfDoc.save();
-  return new Blob([pdfBytes], { type: 'application/pdf' });
+  return new Blob([pdfBytes as any], { type: 'application/pdf' });
 }
