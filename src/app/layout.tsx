@@ -19,6 +19,14 @@ export default function RootLayout({
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2940894836192894" 
           crossOrigin="anonymous"
         />
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-TT7HYVRZGJ"></script>
+        <script dangerouslySetInnerHTML={{ __html: `
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-TT7HYVRZGJ');
+        `}} />
       </head>
       <body>
         <nav style={{ padding: '1.5rem 2rem', borderBottom: '1px solid var(--border)' }}>
